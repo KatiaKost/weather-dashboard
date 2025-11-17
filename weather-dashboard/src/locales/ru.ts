@@ -9,11 +9,12 @@ export const ru = {
   },
 
   // Заголовки
-  headers: {
+   headers: {
     weatherDashboard: 'Погодный Дашборд',
     currentWeather: 'Текущая погода',
     fiveDayForecast: 'Прогноз на 5 дней',
     searchCity: 'Поиск города',
+    favorites: 'Избранные города', 
   },
 
   // Описания
