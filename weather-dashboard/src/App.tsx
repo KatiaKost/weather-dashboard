@@ -5,7 +5,8 @@ import {
   SearchSuggestions, 
   CurrentWeather, 
   ForecastList,
-  EmptyState 
+  EmptyState,
+  FavoritesList 
 } from './components/weather';
 import { useWeather, useCitySearch, useTranslation } from './hooks';
 
@@ -15,13 +16,11 @@ function App() {
   const t = useTranslation();
 
   const handleSearch = (city: string) => {
-    // Устанавливаем выбранный город для поиска погоды
     handleSuggestionClick(city);
   };
 
-  const handleInputChange = (value: string) => {
-    // Только обновляем поисковый термин для подсказок
-    setSearchTerm(value);
+  const handleCitySelect = (city: string) => {
+    handleSuggestionClick(city);
   };
 
   // Определяем состояния для отображения
@@ -44,6 +43,9 @@ function App() {
         
         <main>
           <div className="max-w-4xl mx-auto space-y-6">
+            {/* Список избранных городов */}
+            <FavoritesList onCitySelect={handleCitySelect} />
+
             {/* Search Section */}
             <Card className="p-6 relative">
               <h2 className="text-xl font-semibold mb-4">{t.headers.searchCity}</h2>
@@ -54,15 +56,10 @@ function App() {
                 />
                 <SearchSuggestions
                   suggestions={suggestions}
-                  onSuggestionClick={handleSuggestionClick}
+                  onSuggestionClick={handleCitySelect}
                   visible={suggestions.length > 0 && searchTerm.length > 0}
                 />
               </div>
-              {searchTerm && !selectedCity && suggestions.length === 0 && (
-                <p className="text-sm text-gray-500 mt-2">
-                  Нажмите Enter для поиска или выберите город из списка выше
-                </p>
-              )}
             </Card>
 
             {/* Loading State */}
@@ -103,7 +100,7 @@ function App() {
               </>
             )}
 
-            {/* Searching State - показать подсказку */}
+            {/* Searching State */}
             {showSearchingState && (
               <EmptyState type="search" />
             )}
