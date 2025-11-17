@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { useDebounce } from '../../hooks/useDebounce'; 
 import { useTranslation } from '../../hooks/useTranslation';
 
 interface SearchBarProps {
@@ -11,15 +10,7 @@ interface SearchBarProps {
 
 export const SearchBar = ({ onSearch, isLoading = false }: SearchBarProps) => {
   const [inputValue, setInputValue] = useState('');
-  const debouncedSearchTerm = useDebounce(inputValue, 500);
   const t = useTranslation();
-
-  // Автопоиск при изменении debounced значения
-  useEffect(() => {
-    if (debouncedSearchTerm.trim()) {
-      onSearch(debouncedSearchTerm.trim());
-    }
-  }, [debouncedSearchTerm, onSearch]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

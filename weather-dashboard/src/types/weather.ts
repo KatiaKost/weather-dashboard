@@ -1,4 +1,4 @@
-export interface CurrentWeather {
+﻿export interface CurrentWeather {
   name: string;
   main: {
     temp: number;
@@ -58,15 +58,3 @@ export interface ForecastResponse {
     timezone: number;
   };
 }
-
-export interface City {
-  id: string;
-  name: string;
-  country: string;
-  coord: {
-    lat: number;
-    lon: number;
-  };
-}
-
-export type { CurrentWeather as default };
