@@ -1,22 +1,48 @@
-import { useState } from 'react';
-import { Button } from './components/ui/Button';
-import { Input } from './components/ui/Input';
 import { Card } from './components/ui/Card';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
-import { useWeather } from './hooks/useWeather';
-import { useTranslation } from './hooks/useTranslation';
+import { SearchBar, SearchSuggestions } from './components/weather';
+import { useWeather, useCitySearch, useTranslation } from './hooks';
 
 function App() {
-  const [searchCity, setSearchCity] = useState('');
-  const [city, setCity] = useState('');
-  const { currentWeather, forecast, isLoading, isError, error } = useWeather(city);
+  const { searchTerm, setSearchTerm, suggestions, selectedCity, handleSuggestionClick } = useCitySearch();
+  const { currentWeather, forecast, isLoading, isError, error } = useWeather(selectedCity);
   const t = useTranslation();
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchCity.trim()) {
-      setCity(searchCity.trim());
-    }
+  const handleSearch = (city: string) => {
+    setSearchTerm(city);
+  };
+
+  // Функция для перевода названий городов
+  const translateCityName = (englishName: string): string => {
+    const cityMap: { [key: string]: string } = {
+      'Moscow': 'Москва',
+      'Saint Petersburg': 'Санкт-Петербург',
+      'Novosibirsk': 'Новосибирск',
+      'Yekaterinburg': 'Екатеринбург',
+      'Kazan': 'Казань',
+      'Nizhny Novgorod': 'Нижний Новгород',
+      'Chelyabinsk': 'Челябинск',
+      'Samara': 'Самара',
+      'Omsk': 'Омск',
+      'Rostov-on-Don': 'Ростов-на-Дону',
+      'Ufa': 'Уфа',
+      'Krasnoyarsk': 'Красноярск',
+      'Voronezh': 'Воронеж',
+      'Perm': 'Пермь',
+      'Volgograd': 'Волгоград',
+      'London': 'Лондон',
+      'Paris': 'Париж',
+      'Tokyo': 'Токио',
+      'New York': 'Нью-Йорк',
+      'Berlin': 'Берлин',
+      'Kyiv': 'Киев',
+      'Minsk': 'Минск',
+      'Astana': 'Астана',
+      'Beijing': 'Пекин',
+      'Sydney': 'Сидней'
+    };
+    
+    return cityMap[englishName] || englishName;
   };
 
   // Функция для получения иконки погоды
@@ -77,19 +103,24 @@ function App() {
         <main>
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Search Section */}
-            <Card className="p-6">
+            <Card className="p-6 relative">
               <h2 className="text-xl font-semibold mb-4">{t.headers.searchCity}</h2>
-              <form onSubmit={handleSearch} className="flex gap-4">
-                <Input 
-                  placeholder={t.descriptions.searchPlaceholder}
-                  className="flex-1"
-                  value={searchCity}
-                  onChange={(e) => setSearchCity(e.target.value)}
+              <div className="relative">
+                <SearchBar 
+                  onSearch={handleSearch}
+                  isLoading={isLoading}
                 />
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? t.buttons.searching : t.buttons.search}
-                </Button>
-              </form>
+                <SearchSuggestions
+                  suggestions={suggestions}
+                  onSuggestionClick={handleSuggestionClick}
+                  visible={suggestions.length > 0 && searchTerm.length > 0}
+                />
+              </div>
+              {searchTerm && !selectedCity && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Начните вводить название города для поиска...
+                </p>
+              )}
             </Card>
 
             {/* Weather Display */}
@@ -120,7 +151,7 @@ function App() {
                 {/* Current Weather */}
                 <Card className="p-6">
                   <h2 className="text-2xl font-bold mb-4">
-                    {t.headers.currentWeather} в {currentWeather.name}, {currentWeather.sys.country}
+                    {t.headers.currentWeather} в {translateCityName(currentWeather.name)}, {currentWeather.sys.country}
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex items-center">
@@ -133,13 +164,15 @@ function App() {
                       </div>
                       <div className="ml-4">
                         <div className="text-6xl font-bold">
-                          {Math.round(currentWeather.main.temp)}{t.units.celsius}
+                          {Math.round(currentWeather.main.temp)}
+                          <span className="text-4xl">{t.units.celsius}</span>
                         </div>
                         <div className="text-lg capitalize text-gray-600">
                           {translateWeatherDescription(currentWeather.weather[0].description)}
                         </div>
                         <div className="text-gray-500">
-                          {t.weather.feelsLike} {Math.round(currentWeather.main.feels_like)}{t.units.celsius}
+                          {t.weather.feelsLike} {Math.round(currentWeather.main.feels_like)}
+                          <span className="text-sm">{t.units.celsius}</span>
                         </div>
                       </div>
                     </div>
@@ -162,6 +195,11 @@ function App() {
                       />
                     </div>
                   </div>
+                  
+                  {/* Строка с атрибуцией */}
+                  <div className="text-xs text-gray-400 text-center mt-4">
+                    Данные предоставлены OpenWeatherMap
+                  </div>
                 </Card>
 
                 {/* 5-Day Forecast */}
@@ -180,13 +218,14 @@ function App() {
                             className="w-12 h-12 mx-auto mb-2"
                           />
                           <div className="text-2xl font-bold my-1">
-                            {Math.round(day.main.temp)}{t.units.celsius}
+                            {Math.round(day.main.temp)}
+                            <span className="text-lg">{t.units.celsius}</span>
                           </div>
                           <div className="text-sm text-gray-600 capitalize mb-1">
                             {translateWeatherDescription(day.weather[0].description)}
                           </div>
                           <div className="text-xs text-gray-500">
-                            М: {Math.round(day.main.temp_max)}{t.units.celsius} м: {Math.round(day.main.temp_min)}{t.units.celsius}
+                            М: {Math.round(day.main.temp_max)}° м: {Math.round(day.main.temp_min)}°
                           </div>
                         </div>
                       ))}
@@ -196,7 +235,15 @@ function App() {
               </>
             )}
 
-            {!currentWeather && !isLoading && !isError && (
+            {!currentWeather && !isLoading && !isError && searchTerm && !selectedCity && (
+              <Card className="p-6">
+                <div className="text-center text-gray-500 py-8">
+                  Нажмите Enter или выберите город из списка для поиска погоды
+                </div>
+              </Card>
+            )}
+
+            {!searchTerm && !isLoading && !isError && (
               <Card className="p-6">
                 <div className="text-center text-gray-500 py-8">
                   {t.descriptions.enterCity}

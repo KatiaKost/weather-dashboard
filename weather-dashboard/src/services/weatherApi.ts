@@ -28,38 +28,40 @@ export const weatherService = {
   },
 };
 
-// Резервный мок-сервис
+// Обновляем мок-сервис чтобы сначала пробовать реальный API
 export const mockWeatherService = {
   async getCurrentWeather(city: string): Promise<CurrentWeather> {
     try {
+      console.log('Fetching real weather data for:', city);
       return await weatherService.getCurrentWeather(city);
     } catch (error) {
-      console.warn('Using mock data due to API error:', error);
+      console.warn('Real API failed, using mock data:', error);
+      // Только если реальный API не работает, используем мок
       await new Promise(resolve => setTimeout(resolve, 500));
       
       return {
         name: city,
         main: {
-          temp: 15,
-          feels_like: 14,
-          humidity: 65,
-          pressure: 1013,
-          temp_min: 12,
-          temp_max: 18,
+          temp: Math.round(Math.random() * 30 - 5), // Случайная температура от -5 до 25
+          feels_like: Math.round(Math.random() * 30 - 5),
+          humidity: Math.round(Math.random() * 50 + 30), // 30-80%
+          pressure: Math.round(Math.random() * 100 + 1000), // 1000-1100
+          temp_min: Math.round(Math.random() * 25 - 5),
+          temp_max: Math.round(Math.random() * 35 - 5),
         },
         weather: [
           {
-            main: 'Clouds',
-            description: 'scattered clouds',
-            icon: '03d',
+            main: ['Clear', 'Clouds', 'Rain', 'Snow'][Math.floor(Math.random() * 4)],
+            description: 'test data',
+            icon: '01d',
           },
         ],
         wind: {
-          speed: 3.5,
-          deg: 180,
+          speed: Math.round(Math.random() * 10 + 1), // 1-11 м/с
+          deg: Math.round(Math.random() * 360),
         },
         sys: {
-          country: 'US',
+          country: 'RU',
           sunrise: Math.floor(Date.now() / 1000) - 3600,
           sunset: Math.floor(Date.now() / 1000) + 3600,
         },
@@ -71,22 +73,25 @@ export const mockWeatherService = {
 
   async getFiveDayForecast(city: string): Promise<ForecastResponse> {
     try {
+      console.log('Fetching real forecast for:', city);
       return await weatherService.getFiveDayForecast(city);
     } catch (error) {
-      console.warn('Using mock forecast data due to API error:', error);
+      console.warn('Real API failed, using mock forecast:', error);
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const forecastItems: ForecastItem[] = [];
-      for (let i = 0; i < 40; i++) { // 5 days * 8 forecasts per day
+      const baseTemp = Math.round(Math.random() * 25 + 5); // Базовая температура 5-30°C
+      
+      for (let i = 0; i < 40; i++) {
         forecastItems.push({
-          dt: Math.floor(Date.now() / 1000) + i * 10800, // Every 3 hours
+          dt: Math.floor(Date.now() / 1000) + i * 10800,
           main: {
-            temp: 15 + i * 0.5,
-            feels_like: 14 + i * 0.5,
-            humidity: 60 + i,
+            temp: baseTemp + Math.round(Math.random() * 8 - 4), // ±4°C от базовой
+            feels_like: baseTemp + Math.round(Math.random() * 8 - 4),
+            humidity: Math.round(Math.random() * 50 + 30),
             pressure: 1013,
-            temp_min: 12 + i * 0.5,
-            temp_max: 18 + i * 0.5,
+            temp_min: baseTemp + Math.round(Math.random() * 6 - 6),
+            temp_max: baseTemp + Math.round(Math.random() * 6 + 2),
           },
           weather: [
             {
@@ -96,7 +101,7 @@ export const mockWeatherService = {
             },
           ],
           wind: {
-            speed: 3 + i * 0.1,
+            speed: 3 + Math.round(Math.random() * 8),
             deg: 180,
           },
           visibility: 10000,
@@ -109,7 +114,7 @@ export const mockWeatherService = {
         list: forecastItems,
         city: {
           name: city,
-          country: 'US',
+          country: 'RU',
           timezone: 0,
         },
       };

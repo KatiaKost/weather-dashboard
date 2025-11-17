@@ -11,7 +11,11 @@ export const useWeather = (city: string) => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!city) return;
+    if (!city) {
+      setData({ currentWeather: null, forecast: null });
+      setError(null);
+      return;
+    }
 
     const fetchWeather = async () => {
       setIsLoading(true);
@@ -26,6 +30,7 @@ export const useWeather = (city: string) => {
         setData({ currentWeather: current, forecast });
       } catch (err) {
         setError(err as Error);
+        setData({ currentWeather: null, forecast: null });
       } finally {
         setIsLoading(false);
       }
