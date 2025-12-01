@@ -1,4 +1,3 @@
-// src/components/weather/CurrentWeather.tsx
 import { Card } from '../ui/Card';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useFavoritesStore } from '../../stores/favoritesStore';
