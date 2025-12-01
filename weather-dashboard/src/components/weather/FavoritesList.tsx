@@ -6,6 +6,39 @@ interface FavoritesListProps {
   onCitySelect: (city: string) => void;
 }
 
+// Функция для перевода названий городов (такая же как в CurrentWeather.tsx)
+const translateCityName = (englishName: string): string => {
+  const cityMap: { [key: string]: string } = {
+    'Moscow': 'Москва',
+    'Saint Petersburg': 'Санкт-Петербург',
+    'Novosibirsk': 'Новосибирск',
+    'Yekaterinburg': 'Екатеринбург',
+    'Kazan': 'Казань',
+    'Nizhny Novgorod': 'Нижний Новгород',
+    'Chelyabinsk': 'Челябинск',
+    'Samara': 'Самара',
+    'Omsk': 'Омск',
+    'Rostov-on-Don': 'Ростов-на-Дону',
+    'Ufa': 'Уфа',
+    'Krasnoyarsk': 'Красноярск',
+    'Voronezh': 'Воронеж',
+    'Perm': 'Пермь',
+    'Volgograd': 'Волгоград',
+    'London': 'Лондон',
+    'Paris': 'Париж',
+    'Tokyo': 'Токио',
+    'New York': 'Нью-Йорк',
+    'Berlin': 'Берлин',
+    'Kyiv': 'Киев',
+    'Minsk': 'Минск',
+    'Astana': 'Астана',
+    'Beijing': 'Пекин',
+    'Sydney': 'Сидней'
+  };
+  
+  return cityMap[englishName] || englishName;
+};
+
 export const FavoritesList = ({ onCitySelect }: FavoritesListProps) => {
   const { favorites, removeFavorite } = useFavoritesStore();
   const t = useTranslation();
@@ -33,7 +66,10 @@ export const FavoritesList = ({ onCitySelect }: FavoritesListProps) => {
               onClick={() => onCitySelect(favorite.name)}
               className="flex-1 text-left hover:text-blue-600 transition-colors duration-200"
             >
-              <div className="font-medium text-sm md:text-base">{favorite.name}</div>
+              {/* Используем переведенное название */}
+              <div className="font-medium text-sm md:text-base">
+                {translateCityName(favorite.name)}
+              </div>
               <div className="text-xs md:text-sm text-gray-500">{favorite.country}</div>
             </button>
             <button

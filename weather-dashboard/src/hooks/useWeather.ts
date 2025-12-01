@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { mockWeatherService } from '../services/weatherApi';
+import { weatherService } from '../services/weatherApi'; 
 import type { CurrentWeather, ForecastResponse } from '../types/weather';
 
 export const useWeather = (city: string) => {
@@ -11,11 +11,13 @@ export const useWeather = (city: string) => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!city) {
+    if (!city || city.trim() === '') {
       setData({ currentWeather: null, forecast: null });
       setError(null);
       return;
     }
+
+    let isMounted = true;
 
     const fetchWeather = async () => {
       setIsLoading(true);
@@ -23,20 +25,35 @@ export const useWeather = (city: string) => {
       
       try {
         const [current, forecast] = await Promise.all([
-          mockWeatherService.getCurrentWeather(city),
-          mockWeatherService.getFiveDayForecast(city)
+          weatherService.getCurrentWeather(city),
+          weatherService.getFiveDayForecast(city)
         ]);
         
-        setData({ currentWeather: current, forecast });
+        if (isMounted) {
+          setData({ currentWeather: current, forecast });
+        }
       } catch (err) {
-        setError(err as Error);
-        setData({ currentWeather: null, forecast: null });
+        if (isMounted) {
+          const errorMessage = err instanceof Error ? err.message : 'Не удалось получить данные о погоде';
+          setError(new Error(errorMessage));
+          setData({ currentWeather: null, forecast: null });
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    fetchWeather();
+    // Дебаунс запросов
+    const timeoutId = setTimeout(() => {
+      fetchWeather();
+    }, 300);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
   }, [city]);
 
   return {

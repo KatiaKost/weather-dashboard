@@ -1,5 +1,7 @@
+// src/components/weather/CurrentWeather.tsx
 import { Card } from '../ui/Card';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useFavoritesStore } from '../../stores/favoritesStore';
 import type { CurrentWeather as CurrentWeatherType } from '../../types/weather';
 
 interface CurrentWeatherProps {
@@ -8,6 +10,8 @@ interface CurrentWeatherProps {
 
 export const CurrentWeather = ({ data }: CurrentWeatherProps) => {
   const t = useTranslation();
+  const { addFavorite, removeFavorite, isFavorite } = useFavoritesStore();
+  const isCityFavorite = isFavorite(data.name);
 
   // Функция для перевода названий городов
   const translateCityName = (englishName: string): string => {
@@ -40,6 +44,14 @@ export const CurrentWeather = ({ data }: CurrentWeatherProps) => {
     };
     
     return cityMap[englishName] || englishName;
+  };
+
+  const handleFavoriteToggle = () => {
+    if (isCityFavorite) {
+      removeFavorite(data.name);
+    } else {
+      addFavorite(data.name, data.sys.country);
+    }
   };
 
   // Функция для получения иконки погоды
@@ -78,13 +90,26 @@ export const CurrentWeather = ({ data }: CurrentWeatherProps) => {
   };
 
   return (
-    <Card className="p-6">
-      <h2 className="text-2xl font-bold mb-4">
-        {t.headers.currentWeather} в {translateCityName(data.name)}, {data.sys.country}
-      </h2>
+    <Card className="p-6 animate-fade-in hover-lift">
+      <div className="flex justify-between items-start mb-4">
+        <h2 className="text-2xl font-bold">
+          {t.headers.currentWeather} в {translateCityName(data.name)}, {data.sys.country}
+        </h2>
+        <button
+          onClick={handleFavoriteToggle}
+          className={`p-2 rounded-full transition-all duration-300 text-2xl smooth-transition ${
+            isCityFavorite 
+              ? 'text-yellow-500 hover:bg-yellow-50 hover:scale-110' 
+              : 'text-gray-400 hover:bg-gray-100 hover:text-yellow-500 hover:scale-110'
+          }`}
+          title={isCityFavorite ? t.buttons.removeFromFavorites : t.buttons.addToFavorites}
+        >
+          {isCityFavorite ? '★' : '☆'}
+        </button>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="flex items-center">
-          <div>
+        <div className="flex items-center animate-scale-in">
+          <div className="transform hover:scale-105 transition-transform duration-300">
             <img 
               src={getWeatherIcon(data.weather[0].icon)} 
               alt={data.weather[0].description}
@@ -92,14 +117,14 @@ export const CurrentWeather = ({ data }: CurrentWeatherProps) => {
             />
           </div>
           <div className="ml-4">
-            <div className="text-6xl font-bold">
+            <div className="text-6xl font-bold animate-fade-in">
               {Math.round(data.main.temp)}
               <span className="text-4xl">{t.units.celsius}</span>
             </div>
-            <div className="text-lg capitalize text-gray-600">
+            <div className="text-lg capitalize text-gray-600 animate-slide-in">
               {translateWeatherDescription(data.weather[0].description)}
             </div>
-            <div className="text-gray-500">
+            <div className="text-gray-500 animate-fade-in">
               {t.weather.feelsLike} {Math.round(data.main.feels_like)}
               <span className="text-sm">{t.units.celsius}</span>
             </div>
@@ -112,7 +137,7 @@ export const CurrentWeather = ({ data }: CurrentWeatherProps) => {
           />
           <WeatherDetail 
             label={t.weather.wind} 
-            value={`${data.wind.speed} ${t.units.metersPerSecond}`} 
+            value={`${Math.round(data.wind.speed)} ${t.units.metersPerSecond}`} 
           />
           <WeatherDetail 
             label={t.weather.pressure} 
@@ -126,7 +151,7 @@ export const CurrentWeather = ({ data }: CurrentWeatherProps) => {
       </div>
       
       {/* Строка с атрибуцией */}
-      <div className="text-xs text-gray-400 text-center mt-4">
+      <div className="text-xs text-gray-400 text-center mt-4 animate-fade-in">
         Данные предоставлены OpenWeatherMap
       </div>
     </Card>
@@ -135,7 +160,7 @@ export const CurrentWeather = ({ data }: CurrentWeatherProps) => {
 
 // Вспомогательный компонент для отображения деталей погоды
 const WeatherDetail = ({ label, value }: { label: string; value: string }) => (
-  <div className="text-center p-3 bg-gray-50 rounded-lg">
+  <div className="text-center p-3 bg-gray-50 rounded-lg smooth-transition hover:bg-gray-100 hover-lift">
     <div className="text-sm text-gray-600">{label}</div>
     <div className="font-semibold">{value}</div>
   </div>
