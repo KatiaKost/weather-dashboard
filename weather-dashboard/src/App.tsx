@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card } from './components/ui/Card';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { 
@@ -14,13 +15,21 @@ function App() {
   const { searchTerm, setSearchTerm, suggestions, selectedCity, handleSuggestionClick } = useCitySearch();
   const { currentWeather, forecast, isLoading, isError, error } = useWeather(selectedCity);
   const t = useTranslation();
+  const [favoritesError, setFavoritesError] = useState<string | null>(null);
 
   const handleSearch = (city: string) => {
+    setFavoritesError(null);
     handleSuggestionClick(city);
   };
 
   const handleCitySelect = (city: string) => {
-    handleSuggestionClick(city);
+    setFavoritesError(null);
+    try {
+      handleSuggestionClick(city);
+    } catch (error) {
+      console.error('Error selecting favorite city:', error);
+      setFavoritesError('Не удалось загрузить погоду для избранного города. Попробуйте еще раз.');
+    }
   };
 
   // Определяем состояния для отображения
@@ -45,6 +54,23 @@ function App() {
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Список избранных городов */}
             <FavoritesList onCitySelect={handleCitySelect} />
+
+            {/* Ошибка избранного */}
+            {favoritesError && (
+              <Card className="p-4 bg-red-50 border border-red-200">
+                <div className="flex items-center justify-between">
+                  <div className="text-red-700 text-sm">
+                    {favoritesError}
+                  </div>
+                  <button
+                    onClick={() => setFavoritesError(null)}
+                    className="text-red-500 hover:text-red-700 text-lg font-bold"
+                  >
+                    ×
+                  </button>
+                </div>
+              </Card>
+            )}
 
             {/* Search Section */}
             <Card className="p-6 relative">
