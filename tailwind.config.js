@@ -1,5 +1,9 @@
 export default {
-  content: ['./src/**/*.{js,jsx,ts,tsx}'],
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  darkMode: 'class',
   theme: {
     extend: {
       animation: {
@@ -7,6 +11,8 @@ export default {
         'slide-in': 'slideIn 0.3s ease-out',
         'scale-in': 'scaleIn 0.3s ease-out',
         'hover-lift': 'hoverLift 0.2s ease-out',
+        'float': 'float 3s ease-in-out infinite',
+        'pulse-slow': 'pulse 3s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -25,8 +31,19 @@ export default {
           '0%': { transform: 'translateY(0)' },
           '100%': { transform: 'translateY(-2px)' },
         },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-10px)' },
+        },
+      },
+      screens: {
+        'xs': '475px',
+        '3xl': '1920px',
+      },
+      backdropBlur: {
+        xs: '2px',
       },
     },
   },
   plugins: [],
-};
+}

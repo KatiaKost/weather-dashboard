@@ -5,9 +5,17 @@ const API_KEY = 'bd5e378503939ddaee76f12ad7a97608';
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 // Флаг для переключения между mock и реальными данными
-const USE_MOCK_DATA = true;
+const USE_MOCK_DATA = false;
 
-// Улучшенная база данных городов с более точными данными
+// Кэш для синхронизации данных между текущей погодой и прогнозом
+const weatherCache: { 
+  [city: string]: {
+    baseTemp: number;
+    baseData: any;
+    timestamp: number;
+  } 
+} = {};
+
 const getCityData = (city: string) => {
   const lowerCity = city.toLowerCase();
   const now = new Date();
@@ -149,7 +157,8 @@ const getCityData = (city: string) => {
       description: seasonData.description,
       icon: seasonData.icon,
       windSpeed: cityInfo.windSpeed,
-      country: cityInfo.country
+      country: cityInfo.country,
+      seasonData // Сохраняем данные сезона для прогноза
     };
   }
   
@@ -186,37 +195,99 @@ const getCityData = (city: string) => {
     description: description,
     icon: icon,
     windSpeed: 2 + Math.round(Math.random() * 6),
-    country: 'RU'
+    country: 'RU',
+    seasonData: { temp: baseTemp, condition, description, icon }
   };
 };
 
-const getMockWeather = (city: string): CurrentWeather => {
+// Функция для получения базовых данных с кэшированием
+const getCityBaseData = (city: string) => {
+  const now = Date.now();
+  const cacheKey = city.toLowerCase();
+  
+  // Если есть свежий кэш (менее 5 минут), используем его
+  if (weatherCache[cacheKey] && (now - weatherCache[cacheKey].timestamp) < 5 * 60 * 1000) {
+    return weatherCache[cacheKey];
+  }
+  
   const cityData = getCityData(city);
+  const hour = new Date().getHours();
+  
+  // Корректировка температуры в зависимости от времени суток для текущего момента
+  let baseTemp = cityData.temperature;
+  if (hour < 6 || hour > 20) baseTemp -= 5; // Ночью холоднее
+  if (hour >= 12 && hour <= 16) baseTemp += 3; // Днем теплее
+  
+  const baseData = {
+    englishName: cityData.englishName,
+    country: cityData.country,
+    humidity: cityData.humidity,
+    windSpeed: cityData.windSpeed,
+    condition: cityData.condition,
+    description: cityData.description,
+    icon: cityData.icon,
+    seasonData: cityData.seasonData
+  };
+  
+  // Сохраняем в кэш
+  weatherCache[cacheKey] = {
+    baseTemp: Math.round(baseTemp),
+    baseData,
+    timestamp: now
+  };
+  
+  return weatherCache[cacheKey];
+};
+
+const getMockWeather = (city: string): CurrentWeather => {
+  const { baseTemp, baseData } = getCityBaseData(city);
   const now = new Date();
+  const hour = now.getHours();
+  
+  // Дополнительная корректировка для точного времени
+  let currentTemp = baseTemp;
+  const randomAdjustment = (Math.random() - 0.5) * 4; // ±2 градуса
+  
+  // Учитываем точное время суток
+  if (hour >= 22 || hour < 6) {
+    currentTemp -= 3 + Math.random() * 2; // Ночью еще холоднее
+  } else if (hour >= 6 && hour < 10) {
+    currentTemp -= 1; // Утро
+  } else if (hour >= 10 && hour < 14) {
+    currentTemp += 2; // Полдень
+  } else if (hour >= 14 && hour < 18) {
+    currentTemp += 1; // Послеполуденное время
+  } else if (hour >= 18 && hour < 22) {
+    currentTemp -= 1; // Вечер
+  }
+  
+  currentTemp += randomAdjustment;
+  
+  const feelsLikeAdjustment = (Math.random() > 0.5 ? -2 : -3);
   
   return {
-    name: cityData.englishName || city,
+    name: baseData.englishName || city,
     main: {
-      temp: cityData.temperature,
-      feels_like: cityData.temperature - (Math.random() > 0.5 ? 2 : 3),
-      humidity: cityData.humidity,
+      temp: Math.round(currentTemp * 10) / 10, // Один знак после запятой
+      feels_like: Math.round((currentTemp + feelsLikeAdjustment) * 10) / 10,
+      humidity: baseData.humidity + Math.round(Math.random() * 10 - 5), // ±5%
       pressure: 1013 - Math.round(Math.random() * 20),
-      temp_min: cityData.temperature - Math.round(Math.random() * 5),
-      temp_max: cityData.temperature + Math.round(Math.random() * 5),
+      temp_min: Math.round((currentTemp - 3 - Math.random() * 2) * 10) / 10,
+      temp_max: Math.round((currentTemp + 3 + Math.random() * 2) * 10) / 10,
     },
     weather: [
       {
-        main: cityData.condition,
-        description: cityData.description,
-        icon: cityData.icon,
+        main: baseData.condition,
+        description: baseData.description,
+        icon: baseData.icon,
       },
     ],
     wind: {
-      speed: cityData.windSpeed,
+      speed: baseData.windSpeed + (Math.random() * 2 - 1), // ±1 м/с
       deg: Math.round(Math.random() * 360),
     },
     sys: {
-      country: cityData.country,
+      country: baseData.country,
       sunrise: Math.floor(now.setHours(6, 0, 0, 0) / 1000),
       sunset: Math.floor(now.setHours(21, 0, 0, 0) / 1000),
     },
@@ -226,59 +297,100 @@ const getMockWeather = (city: string): CurrentWeather => {
 };
 
 const getMockForecast = (city: string): ForecastResponse => {
-  const cityData = getCityData(city);
+  const { baseTemp, baseData } = getCityBaseData(city);
   const forecastItems: ForecastItem[] = [];
+  const now = new Date();
   
+  // Получаем текущую погоду, чтобы прогноз начинался с тех же данных
+  const currentWeather = getMockWeather(city);
+  const currentTemp = currentWeather.main.temp;
+  
+  // Создаем прогноз на 5 дней (40 записей по 3 часа)
   for (let i = 0; i < 40; i++) {
-    const date = new Date(Date.now() + i * 10800 * 1000);
+    const date = new Date(Date.now() + i * 10800 * 1000); // +3 часа каждый шаг
     const dayIndex = Math.floor(i / 8);
     const hour = date.getHours();
     
-    // Температура меняется в течение дня
-    let dailyTemp = cityData.temperature;
-    if (hour < 6 || hour > 22) dailyTemp -= 5; // Ночью холоднее
-    if (hour >= 12 && hour <= 16) dailyTemp += 3; // Днем теплее
+    // Начинаем с текущей температуры для первого интервала
+    let forecastTemp = i === 0 ? currentTemp : baseTemp;
     
-    // Добавляем небольшие случайные колебания
-    dailyTemp += (Math.random() - 0.5) * 4;
+    // Корректировка на основе дня прогноза
+    if (dayIndex > 0) {
+      // Плавное изменение температуры в следующие дни
+      const dayChange = (Math.random() - 0.5) * 8; // ±4 градуса за день
+      forecastTemp += dayChange;
+    }
     
-    // Погода может меняться в течение прогноза
-    let condition = cityData.condition;
-    let description = cityData.description;
-    let icon = cityData.icon;
+    // Суточные колебания (более реалистичные)
+    if (hour >= 22 || hour < 6) {
+      forecastTemp -= 5 + Math.random() * 2; // Ночь
+    } else if (hour >= 6 && hour < 10) {
+      forecastTemp -= 2 + Math.random(); // Утро
+    } else if (hour >= 10 && hour < 14) {
+      forecastTemp += 3 + Math.random(); // Полдень
+    } else if (hour >= 14 && hour < 18) {
+      forecastTemp += 1 + Math.random(); // Послеполуденное время
+    } else if (hour >= 18 && hour < 22) {
+      forecastTemp -= 1 + Math.random(); // Вечер
+    }
     
-    if (dayIndex > 2) {
-      // Через несколько дней погода может измениться
-      if (Math.random() > 0.7) {
-        condition = Math.random() > 0.5 ? 'Clouds' : 'Clear';
-        description = condition === 'Clouds' ? 'облачно' : 'ясно';
-        icon = condition === 'Clouds' ? '03d' : '01d';
+    // Небольшие случайные колебания
+    forecastTemp += (Math.random() - 0.5) * 2;
+    
+    // Погодные условия могут меняться в течение прогноза
+    let condition = baseData.condition;
+    let description = baseData.description;
+    let icon = baseData.icon;
+    
+    // Через день прогноз может измениться
+    if (dayIndex >= 1) {
+      const changeChance = 0.3 + dayIndex * 0.1; // Увеличиваем шанс изменения с каждым днем
+      if (Math.random() < changeChance) {
+        const conditions = ['Clear', 'Clouds', 'Rain', 'Snow'];
+        const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
+        
+        const conditionMap: { [key: string]: { description: string; icon: string } } = {
+          'Clear': { description: 'ясно', icon: '01d' },
+          'Clouds': { description: 'облачно', icon: '03d' },
+          'Rain': { description: 'дождь', icon: '10d' },
+          'Snow': { description: 'снег', icon: '13d' }
+        };
+        
+        condition = randomCondition;
+        description = conditionMap[randomCondition]?.description || baseData.description;
+        icon = conditionMap[randomCondition]?.icon || baseData.icon;
       }
     }
+    
+    // Вероятность осадков зависит от условий
+    let pop = 0; // Probability of precipitation
+    if (condition === 'Rain') pop = 0.7 + Math.random() * 0.3;
+    else if (condition === 'Snow') pop = 0.6 + Math.random() * 0.4;
+    else if (condition === 'Clouds') pop = 0.1 + Math.random() * 0.2;
     
     forecastItems.push({
       dt: Math.floor(date.getTime() / 1000),
       main: {
-        temp: dailyTemp,
-        feels_like: dailyTemp - 2,
-        humidity: cityData.humidity + Math.round(Math.random() * 20 - 10),
+        temp: Math.round(forecastTemp * 10) / 10,
+        feels_like: Math.round((forecastTemp - 2) * 10) / 10,
+        humidity: baseData.humidity + Math.round(Math.random() * 20 - 10),
         pressure: 1013 - Math.round(Math.random() * 20),
-        temp_min: dailyTemp - 3 - Math.random() * 2,
-        temp_max: dailyTemp + 3 + Math.random() * 2,
+        temp_min: Math.round((forecastTemp - 3 - Math.random() * 2) * 10) / 10,
+        temp_max: Math.round((forecastTemp + 3 + Math.random() * 2) * 10) / 10,
       },
       weather: [
         {
           main: condition,
           description: description,
-          icon: icon,
+          icon: hour >= 6 && hour <= 18 ? icon.replace('d', 'd') : icon.replace('d', 'n'),
         },
       ],
       wind: {
-        speed: cityData.windSpeed + Math.random() * 2,
+        speed: baseData.windSpeed + (Math.random() * 3 - 1.5),
         deg: Math.round(Math.random() * 360),
       },
       visibility: 10000 - Math.round(Math.random() * 3000),
-      pop: dayIndex === 0 ? 0.1 : Math.random() * 0.3, // Вероятность осадков
+      pop: Math.min(pop, 1),
       dt_txt: date.toISOString(),
     });
   }
@@ -286,8 +398,8 @@ const getMockForecast = (city: string): ForecastResponse => {
   return {
     list: forecastItems,
     city: {
-      name: cityData.englishName || city,
-      country: cityData.country,
+      name: baseData.englishName || city,
+      country: baseData.country,
       timezone: 0,
     },
   };
