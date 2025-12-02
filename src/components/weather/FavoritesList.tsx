@@ -3,9 +3,12 @@ import { useFavoritesStore } from '../../stores/favoritesStore';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useState } from 'react';
 
+
 interface FavoritesListProps {
   onCitySelect: (city: string) => void;
 }
+
+
 
 // Функция для перевода названий городов
 const translateCityName = (englishName: string): string => {
@@ -183,9 +186,6 @@ export const FavoritesList = ({ onCitySelect }: FavoritesListProps) => {
                     <div className="flex items-center gap-2">
                       <span className="text-lg">
                         {getCountryFlag(favorite.country)}
-                      </span>
-                      <span className="text-xs font-medium px-2 py-1 bg-white/50 dark:bg-gray-700/50 rounded-full text-gray-700 dark:text-gray-300">
-                        {favorite.country}
                       </span>
                     </div>
                     
